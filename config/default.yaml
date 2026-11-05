@@ -1,0 +1,181 @@
+project:
+  name: cathbiomed
+  output_root: ./data
+  run_name: ''
+api:
+  ncbi_api_key: ''
+  s2_api_key: ''
+  openalex_api_key: ''
+  email: ''
+rate_limit:
+  pubmed: 0.34
+  europepmc: 0.2
+  crossref: 0.5
+  openalex: 0.2
+  semantic_scholar: 3.0
+  download: 0.25
+dedup:
+  source_priority:
+    pubmed: 5
+    pmc: 4
+    europepmc: 3
+    crossref: 2
+    openalex: 1
+  abstract_similarity_threshold: 0.05
+library:
+  root: ./data/library
+  inbox_dir: ./data/library/inbox
+  zotero_link_root: ./data/library
+retrieval:
+  timeout_seconds: 30                    # 45 → 30（下载超时，秒）
+  max_attempts_per_record: 3             # 保持不变（每篇最多尝试 3 个来源）
+  max_retries_per_candidate: 1           # 新增：每个来源最多重试次数（原硬编码 2）
+  max_results_per_query: 1000
+  sources:
+    pubmed:
+      enabled: true
+    pmc:
+      enabled: true
+    europepmc:
+      enabled: true
+    crossref:
+      enabled: true
+    openalex:
+      enabled: true
+  parallel: false
+  max_workers: 4
+  paywall_patterns:
+  - subscription required
+  - purchase this article
+  - access through your institution
+  - institutional access
+  - paywall
+  - buy article
+  - rent this article
+  html_second_pass:
+    enabled: true
+    max_links_per_html: 5
+  file_format:
+    keep_pdf: true
+    keep_xml: true
+    # v1.5 未实现 Markdown 转换，convert_to_markdown: false
+    markdown_converter: false
+  file_organization:
+    per_canonical_id_subdir: true
+    filename_stem: article
+  library_cross_check:
+    enabled: true
+    match_by:
+    - canonical_id
+    - doi
+    skip_download_on_hit: true
+fallback:
+  enabled: true
+  pubmed_batch_size: 200
+  local_raw_lookup: true
+enrichment:
+  enabled: true
+  s2_batch_size: 500
+  openalex_concurrency: 4
+  citation:
+    defer_until_after_screening: true
+    fallback_sources:
+    - openalex
+    - pubmed
+    citations_refresh_days: 90
+    max_records_per_run: 500
+    source_probe:
+      attempts: 2
+      attempt_interval_seconds: 2
+      retry_cooldown_hours: 24
+      anchor:
+        pmid: '21376230'
+        doi: 10.1016/j.cell.2011.02.013
+        title_keyword: Hallmarks
+    s2_citations_max_pages: 2
+  journal_metrics:
+    source: local_table
+    data_dir: ./reference/
+    active_year: 2025
+    filename_template: JCR IF {year}.xlsx
+    default_filename_template: JCR IF {year}.default.xlsx
+    fuzzy_match_threshold: 0.85
+screening:
+  retention_mode: release_space
+  trash_retention_days: 30
+  preview_before_apply: true
+  export_template_filename: screening_template.csv
+  default_decision: unscreened
+  zotero_sync_after_screening: false
+  enable_double_review: false
+  prescreen_enabled: false
+  time_windows:
+    first_warning_days: 30
+    strong_warning_days: 90
+    urgent_warning_days: 180
+  require_confirmed_strategy_for_graph: true
+  sidelined_retention:
+    keep_xml: true
+    keep_md: true
+    keep_pdf: false
+  maybe_retention:
+    keep_xml: true
+    keep_md: true
+    keep_pdf: true
+    auto_cleanup_days: null
+  auto_cleanup_trash_on_startup: true
+# Zotero 同步（本地 Connector API；需 Zotero 桌面端运行）
+zotero:
+  # v2.2：固定本地 API；删除 enabled / api_key
+  base_directory: ./data/library
+  link_mode: imported_file
+  default_collection: ''
+  item_type: journalArticle
+  library_type: user
+  library_id: '0'
+  # 超期未同步提醒阈值（天）；<=0 关闭提醒
+  # 对应 UI：设置 → Zotero 连接 → 失效提醒（天）
+  stale_warning_days: 90
+  # 观察分类（用于"可引入"）；空列表 → "可引入"卡视觉禁用
+  # 注意：本字段由 Zotero 页"⚙ 配置"按钮维护（优先级高于设置页）
+  #       设置页保存时不会覆盖本字段
+  import_collection_names: []
+archive:
+  enabled: true
+  strategies_root: ./data/archive/strategies
+  consolidated_root: ./data/archive/consolidated
+  consolidation_threshold_runs: 5
+  keep_audit_runs: 3
+  preview_before_consolidate: true
+  auto_consolidate: false
+  last_run_granularity: per_source
+  grace_days: 0
+pipeline:
+  mode: intensive
+  max_hits_threshold: 5000
+  force_rollback: true
+  force_rollback_to_scan: false
+  scan_max_hits: 100
+  batch:
+    continue_on_failure: true
+output:
+  user_dir: ''
+  export_mode: symlink
+  subdir_template: '{strategy}_{date}'
+  auto_export: false
+query_translation:
+  auto_generate: true
+  audit_enabled: true
+  supported_syntax:
+  - boolean
+  - title_abstract
+  - mesh
+  - publication_type
+  - date_range
+  - author
+  unsupported_action: ask
+  incremental:
+    enabled: true
+    date_field: last_run_date
+    default_behavior: incremental
+    prompt_on_strategy_change: true
