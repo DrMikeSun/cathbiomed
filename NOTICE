@@ -1,0 +1,49 @@
+CathBiomed
+Copyright 2026 CathBiomed
+
+This product includes software developed by third parties:
+
+- PySide6 (Qt for Python) — LGPLv3
+  https://www.qt.io/qt-for-python
+  This application dynamically links to PySide6, which is licensed
+  under the GNU Lesser General Public License v3. LGPLv3 requires that
+  end users are able to replace the PySide6 libraries with a modified
+  version of their own. The PySide6 libraries are shipped as separate
+  files in the application directory and can be replaced. A copy of
+  the LGPLv3 license is available at https://www.gnu.org/licenses/lgpl-3.0.html.
+  To replace PySide6, replace the corresponding DLLs under the
+  application's "_internal/PySide6/" directory.
+  This application uses only the LGPLv3-licensed PySide6 modules
+  (QtCore, QtGui, QtWidgets) and does not include any GPL-only modules.
+- pandas — BSD-3-Clause
+  https://pandas.pydata.org/
+- openpyxl — MIT
+  https://openpyxl.readthedocs.io/
+- pyarrow — Apache-2.0
+  https://arrow.apache.org/
+- httpx — BSD-3-Clause
+  https://www.python-httpx.org/
+- PyYAML — MIT
+  https://pyyaml.org/
+- beautifulsoup4 — MIT
+  https://www.crummy.com/software/BeautifulSoup/
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+------------------------------------------------------------
+JCR IF 2025.default.xlsx
+------------------------------------------------------------
+本程序包 reference/ 目录附带的 JCR IF 2025.default.xlsx
+为 CathBiomed 项目自制/整理数据，用于期刊影响因子与分区匹配。
+如替换为用户自备的 JCR 表，请遵守原数据提供方的订阅协议。
