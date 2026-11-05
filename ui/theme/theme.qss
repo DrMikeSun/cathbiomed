@@ -1,0 +1,633 @@
+/* MedLitFlow 深海玻璃拟态主题。色值占位符由 palette.py 注入。 */
+
+/* Global */
+* {
+    font-family: $FONT_UI;
+    font-size: 14px;
+    color: $TEXT_PRIMARY;
+}
+
+QWidget {
+    background: transparent;
+}
+
+QDialog, QMessageBox {
+    background: $PITCH_DARK;
+    color: $TEXT_PRIMARY;
+}
+
+QDialog QLabel, QMessageBox QLabel {
+    color: $TEXT_PRIMARY;
+}
+
+QDialog QPushButton, QMessageBox QPushButton {
+    min-width: 80px;
+}
+
+QDialog QLineEdit {
+    background: rgba(255, 255, 255, 14);
+    border: 1px solid rgba(255, 255, 255, 28);
+    border-radius: 6px;
+    color: $TEXT_PRIMARY;
+    padding: 5px 8px;
+    font-size: 13px;
+}
+
+QDialog QRadioButton {
+    color: $TEXT_PRIMARY;
+    font-size: 13px;
+    padding: 6px 0;
+}
+
+QDialog QCheckBox {
+    color: $TEXT_PRIMARY;
+    font-size: 13px;
+}
+
+QDialog QScrollArea {
+    background: transparent;
+    border: none;
+}
+
+QToolTip {
+    background: $TOOLTIP_BG;
+    border: 1px solid rgba(0, 168, 255, 80);
+    border-radius: 8px;
+    color: $TEXT_PRIMARY;
+    padding: 6px 10px;
+}
+
+#SystemClock,
+#CardValue,
+#TableNumeric,
+#StatNumeric,
+#ProgressElapsed,
+#LogView {
+    font-family: $FONT_MONO;
+}
+
+/* Main Window */
+QMainWindow {
+    background: $PITCH_DEEP;
+}
+
+/* Header */
+#Header {
+    background: $HEADER_BG;
+    border-bottom: 1px solid rgba(255, 255, 255, 22);
+}
+
+#Logo {
+    color: $CYAN;
+    font-size: 24px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+#HeaderTitle {
+    color: $TEXT_SECONDARY;
+    font-size: 13px;
+    letter-spacing: 2px;
+}
+
+#Header QLabel {
+    color: $TEXT_SECONDARY;
+}
+
+#RunState {
+    color: $TEXT_SECONDARY;
+    font-weight: bold;
+    font-size: 13px;
+    letter-spacing: 1px;
+    padding-left: 6px;
+    padding-right: 6px;
+}
+
+#SystemClock {
+    color: $TEXT_SECONDARY;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+#NotificationBanner {
+    border-radius: 14px;
+}
+
+#NotificationBanner QLabel {
+    color: $TEXT_PRIMARY;
+}
+
+#Sidebar {
+    background: $SIDEBAR_BG;
+    border-right: 1px solid rgba(255, 255, 255, 18);
+    border-top: 1px solid rgba(255, 255, 255, 25);
+}
+
+#SideLogo {
+    color: $CYAN;
+    font-size: 22px;
+    font-weight: bold;
+    padding: 20px;
+    letter-spacing: 1px;
+}
+
+#Sidebar QPushButton {
+    background: rgba(255, 255, 255, 12);
+    border: 1px solid rgba(255, 255, 255, 22);
+    border-top-color: rgba(255, 255, 255, 35);
+    border-bottom-color: rgba(2, 6, 16, 90);
+    border-radius: 12px;
+    height: 48px;
+    padding-left: 18px;
+    text-align: left;
+    color: $TEXT_SECONDARY;
+    font-size: 14px;
+}
+
+#Sidebar QPushButton:hover {
+    background: rgba(0, 133, 255, 40);
+    border: 1px solid rgba(0, 133, 255, 70);
+    border-top-color: rgba(105, 180, 255, 120);
+    border-bottom-color: rgba(2, 6, 16, 100);
+    color: $TEXT_ON_ACCENT;
+}
+
+#Sidebar QPushButton:checked {
+    background: rgba(0, 133, 255, 70);
+    border: 1px solid rgba(0, 133, 255, 120);
+    border-top-color: rgba(105, 180, 255, 200);
+    border-bottom-color: rgba(2, 6, 16, 120);
+    color: $TEXT_ON_ACCENT;
+    font-weight: bold;
+}
+
+#SystemBox {
+    background: rgba(255, 255, 255, 12);
+    border: 1px solid rgba(255, 255, 255, 20);
+    border-top-color: rgba(255, 255, 255, 35);
+    border-bottom-color: rgba(2, 6, 16, 90);
+    border-radius: 14px;
+    padding: 15px;
+    color: $TEXT_SECONDARY;
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+
+#PageTitle {
+    color: $TEXT_PRIMARY;
+    font-size: 20px;
+    font-weight: bold;
+    padding: 2px;
+    letter-spacing: 1px;
+}
+
+#QuantumCard {
+    background: rgba(255, 255, 255, 22);
+    border: 1px solid rgba(255, 255, 255, 40);
+    border-top-color: rgba(255, 255, 255, 70);
+    border-bottom-color: rgba(2, 6, 16, 100);
+    border-radius: 22px;
+    padding: 15px;
+}
+
+#QuantumCard:hover {
+    background: rgba(255, 255, 255, 32);
+    border: 1px solid rgba(255, 255, 255, 60);
+    border-top-color: rgba(255, 255, 255, 95);
+    border-bottom-color: rgba(2, 6, 16, 110);
+}
+
+#CardTitle {
+    color: $TEXT_SECONDARY;
+    font-size: 14px;
+    letter-spacing: 1px;
+}
+
+/* 主蓝 */
+#CardValue {
+    color: $CYAN;
+    font-size: 32px;
+    font-weight: 700;
+}
+
+/* 成功绿 */
+#CardTag {
+    color: $AI_GREEN;
+    font-size: 13px;
+    letter-spacing: 1px;
+}
+
+#DetailTitle {
+    color: $TEXT_PRIMARY;
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+#FilterLabel {
+    color: $TEXT_MUTED;
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+
+#QuantumTable {
+    background: rgba(255, 255, 255, 10);
+    border: 1px solid rgba(255, 255, 255, 25);
+    border-top-color: rgba(255, 255, 255, 45);
+    border-bottom-color: rgba(2, 6, 16, 100);
+    border-radius: 16px;
+    gridline-color: rgba(255, 255, 255, 18);
+}
+
+QHeaderView::section {
+    background: rgba(255, 255, 255, 22);
+    color: $CYAN;
+    border: none;
+    border-bottom: 1px solid rgba(2, 6, 16, 90);
+    border-top: 1px solid rgba(255, 255, 255, 50);
+    padding: 12px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+QTableView {
+    alternate-background-color: rgba(255, 255, 255, 8);
+}
+
+QTableView::item {
+    padding-left: 10px;
+    border: none;
+}
+
+QTableView::item:hover {
+    background: rgba(0, 133, 255, 35);
+}
+
+QTableView::item:selected {
+    background: rgba(0, 133, 255, 160);
+    color: $TEXT_ON_ACCENT;
+}
+
+QTableView::item:selected:!active {
+    background: rgba(0, 133, 255, 160);
+    color: $TEXT_ON_ACCENT;
+}
+
+#TableNumeric {
+    font-family: $FONT_MONO;
+    color: $TEXT_SECONDARY;
+}
+
+#LogView {
+    background: rgba(255, 255, 255, 10);
+    border: 1px solid rgba(255, 255, 255, 20);
+    border-radius: 10px;
+    padding: 8px 10px;
+    color: $TEXT_PRIMARY;
+    font-family: $FONT_MONO;
+    font-size: 12px;
+    selection-background-color: rgba(0, 133, 255, 120);
+}
+
+QScrollBar:vertical {
+    background: rgba(255, 255, 255, 10);
+    width: 10px;
+    border-radius: 5px;
+    margin: 0;
+}
+
+QScrollBar::handle:vertical {
+    background: rgba(0, 133, 255, 130);
+    border-radius: 5px;
+    min-height: 30px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: rgba(105, 180, 255, 200);
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0;
+    background: none;
+}
+
+QScrollBar:horizontal {
+    background: rgba(255, 255, 255, 10);
+    height: 10px;
+    border-radius: 5px;
+}
+
+QScrollBar::handle:horizontal {
+    background: rgba(0, 133, 255, 130);
+    border-radius: 5px;
+    min-width: 30px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background: rgba(105, 180, 255, 200);
+}
+
+QPushButton {
+    background: rgba(255, 255, 255, 14);
+    border: 1px solid rgba(255, 255, 255, 30);
+    border-top-color: rgba(255, 255, 255, 55);
+    border-bottom-color: rgba(2, 6, 16, 90);
+    border-radius: 10px;
+    padding: 6px 14px;
+    min-height: 22px;
+    font-size: 13px;
+    color: $TEXT_PRIMARY;
+}
+
+QPushButton:hover {
+    background: rgba(0, 133, 255, 55);
+    border: 1px solid rgba(0, 133, 255, 90);
+    border-top-color: rgba(105, 180, 255, 140);
+    border-bottom-color: rgba(2, 6, 16, 100);
+}
+
+QPushButton:pressed {
+    background: rgba(0, 107, 255, 90);
+    border: 1px solid rgba(105, 180, 255, 130);
+}
+
+QPushButton#PrimaryCTA {
+    background: rgba(0, 133, 255, 60);
+    border: 1px solid rgba(0, 133, 255, 140);
+    border-top-color: rgba(105, 180, 255, 200);
+    border-bottom-color: rgba(2, 6, 16, 110);
+    color: $TEXT_ON_ACCENT;
+    font-weight: bold;
+    min-height: 22px;
+    font-size: 13px;
+}
+
+QPushButton#PrimaryCTA:hover {
+    background: rgba(0, 133, 255, 90);
+    border: 1px solid rgba(105, 180, 255, 180);
+}
+
+QPushButton#PrimaryCTA:pressed {
+    background: rgba(0, 107, 255, 120);
+}
+
+QPushButton:disabled {
+    background: rgba(255, 255, 255, 8);
+    border: 1px solid rgba(255, 255, 255, 15);
+    border-top-color: rgba(255, 255, 255, 22);
+    border-bottom-color: rgba(2, 6, 16, 45);
+    color: $TEXT_MUTED;
+    font-weight: normal;
+}
+
+QPushButton#PrimaryCTA:disabled {
+    background: rgba(0, 133, 255, 22);
+    border: 1px solid rgba(0, 133, 255, 55);
+    border-top-color: rgba(105, 180, 255, 70);
+    border-bottom-color: rgba(2, 6, 16, 70);
+    color: $TEXT_MUTED;
+    font-weight: normal;
+}
+
+QLineEdit {
+    background: rgba(255, 255, 255, 14);
+    border: 1px solid rgba(255, 255, 255, 28);
+    border-top-color: rgba(2, 6, 16, 90);
+    border-bottom-color: rgba(255, 255, 255, 50);
+    border-radius: 10px;
+    padding: 6px 10px;
+    min-height: 22px;
+    font-size: 13px;
+    color: $TEXT_ON_ACCENT;
+    selection-background-color: rgba(0, 133, 255, 120);
+}
+
+QLineEdit:focus {
+    border: 1px solid rgba(105, 180, 255, 160);
+    background: rgba(255, 255, 255, 20);
+}
+
+QPlainTextEdit {
+    background: rgba(255, 255, 255, 10);
+    border: 1px solid rgba(255, 255, 255, 20);
+    border-radius: 10px;
+    padding: 8px 10px;
+    color: $TEXT_PRIMARY;
+    selection-background-color: rgba(0, 133, 255, 120);
+}
+
+QPlainTextEdit:focus {
+    border: 1px solid rgba(105, 180, 255, 160);
+    background: rgba(255, 255, 255, 16);
+}
+
+QComboBox {
+    background: rgba(255, 255, 255, 14);
+    border: 1px solid rgba(255, 255, 255, 28);
+    border-top-color: rgba(255, 255, 255, 50);
+    border-bottom-color: rgba(2, 6, 16, 90);
+    border-radius: 10px;
+    padding: 6px 9px;
+    min-height: 22px;
+    font-size: 13px;
+    color: $TEXT_PRIMARY;
+}
+
+QComboBox:hover {
+    background: rgba(255, 255, 255, 20);
+    border: 1px solid rgba(0, 133, 255, 90);
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 14px;
+}
+
+QComboBox QAbstractItemView {
+    background: $DROPDOWN_BG;
+    border: 1px solid rgba(0, 133, 255, 60);
+    border-radius: 8px;
+    selection-background-color: rgba(0, 133, 255, 100);
+    selection-color: $TEXT_ON_ACCENT;
+    outline: none;
+}
+
+QSpinBox,
+QDoubleSpinBox {
+    background: rgba(255, 255, 255, 14);
+    border: 1px solid rgba(255, 255, 255, 28);
+    border-top-color: rgba(2, 6, 16, 90);
+    border-bottom-color: rgba(255, 255, 255, 50);
+    border-radius: 10px;
+    padding: 6px 10px;
+    padding-right: 26px;
+    min-height: 22px;
+    font-size: 13px;
+    color: $TEXT_PRIMARY;
+    selection-background-color: rgba(0, 133, 255, 120);
+}
+
+QSpinBox:hover,
+QDoubleSpinBox:hover {
+    background: rgba(255, 255, 255, 20);
+    border: 1px solid rgba(0, 133, 255, 90);
+}
+
+QSpinBox:focus,
+QDoubleSpinBox:focus {
+    border: 1px solid rgba(105, 180, 255, 160);
+    background: rgba(255, 255, 255, 20);
+}
+
+QSpinBox::up-button,
+QDoubleSpinBox::up-button {
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    width: 20px;
+    border: none;
+    background: transparent;
+}
+
+QSpinBox::down-button,
+QDoubleSpinBox::down-button {
+    subcontrol-origin: border;
+    subcontrol-position: bottom right;
+    width: 20px;
+    border: none;
+    background: transparent;
+}
+
+QSpinBox::up-button:hover,
+QDoubleSpinBox::up-button:hover,
+QSpinBox::down-button:hover,
+QDoubleSpinBox::down-button:hover {
+    background: rgba(0, 133, 255, 40);
+}
+
+QSpinBox::up-arrow,
+QDoubleSpinBox::up-arrow {
+    image: none;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 5px solid $TEXT_SECONDARY;
+}
+
+QSpinBox::down-arrow,
+QDoubleSpinBox::down-arrow {
+    image: none;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid $TEXT_SECONDARY;
+}
+
+QCheckBox {
+    color: $TEXT_PRIMARY;
+    spacing: 8px;
+}
+
+QCheckBox::indicator {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 14);
+    border: 1px solid rgba(255, 255, 255, 28);
+}
+
+QCheckBox::indicator:hover {
+    background: rgba(255, 255, 255, 20);
+    border: 1px solid rgba(0, 133, 255, 90);
+}
+
+QCheckBox::indicator:checked {
+    background: rgba(0, 133, 255, 120);
+    border: 1px solid rgba(0, 133, 255, 160);
+}
+
+QProgressBar {
+    background: rgba(255, 255, 255, 22);
+    border: none;
+    border-radius: 8px;
+    height: 12px;
+    text-align: center;
+    color: $TEXT_PRIMARY;
+    font-size: 11px;
+}
+
+QProgressBar::chunk {
+    background: qlineargradient(
+        x1:0, y1:0, x2:1, y2:0,
+        stop:0 $PRIMARY_BLUE,
+        stop:1 $CYAN
+    );
+    border-radius: 8px;
+}
+
+#ProgressTaskName {
+    color: $TEXT_PRIMARY;
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+#ProgressStage {
+    color: $TEXT_SECONDARY;
+    font-size: 12px;
+}
+
+#ProgressElapsed {
+    color: $TEXT_SECONDARY;
+    font-family: $FONT_MONO;
+    font-size: 12px;
+}
+
+.Success  { color: $AI_GREEN; }
+.Warning  { color: $RISK_ORANGE; }
+.Danger   { color: $DANGER_RED; }
+.Info     { color: $CYAN; }
+.Tactical { color: $TACTICAL_PURPLE; }
+
+#Placeholder {
+    color: $TEXT_MUTED;
+    font-size: 24px;
+    letter-spacing: 2px;
+}
+
+.GlassDivider {
+    background: rgba(255, 255, 255, 25);
+    border: none;
+    max-height: 1px;
+}
+
+QMenu {
+    background: $DROPDOWN_BG;
+    border: 1px solid rgba(0, 133, 255, 60);
+    border-radius: 8px;
+    padding: 6px;
+    color: $TEXT_PRIMARY;
+}
+
+QMenu::item {
+    padding: 6px 20px 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+QMenu::item:selected {
+    background: rgba(0, 133, 255, 100);
+    color: $TEXT_ON_ACCENT;
+}
+
+QMenu::item:disabled {
+    color: $TEXT_MUTED;
+}
+
+QMenu::separator {
+    height: 1px;
+    background: rgba(255, 255, 255, 25);
+    margin: 4px 8px;
+}
