@@ -27,6 +27,10 @@ class TasksView(QWidget):
     strategy_reopen_requested = Signal(str)
     completed_reload_requested = Signal()
 
+    strategy_retrieval_again_requested = Signal(str)
+    strategy_view_scan_requested = Signal()
+    strategy_clear_scan_requested = Signal()
+
     tab_changed = Signal(str)
 
     run_resume_requested = Signal(str)
@@ -123,6 +127,15 @@ class TasksView(QWidget):
         )
         self.completed_panel.data_reload_requested.connect(
             self.completed_reload_requested.emit
+        )
+        self.completed_panel.retrieval_again_requested.connect(
+            self.strategy_retrieval_again_requested.emit
+        )
+        self.completed_panel.view_scan_requested.connect(
+            self.strategy_view_scan_requested.emit
+        )
+        self.completed_panel.clear_scan_requested.connect(
+            self.strategy_clear_scan_requested.emit
         )
         self.incomplete_run_panel.resume_requested.connect(
             self.run_resume_requested.emit

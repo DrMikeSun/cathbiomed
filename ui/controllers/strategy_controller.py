@@ -295,6 +295,7 @@ class StrategyController(QObject):
         registry_path = archive_root / "strategy_registry.parquet"
         records_path = library_root / "records_final.parquet"
         decisions_path = library_root / "screening_decisions.parquet"
+        scan_meta_path = library_root / "scan_cache" / "scan_meta.json"
 
         def _safe_mtime(p):
             try:
@@ -306,6 +307,7 @@ class StrategyController(QObject):
             _safe_mtime(records_path),
             _safe_mtime(decisions_path),
             _safe_mtime(registry_path),
+            _safe_mtime(scan_meta_path),
         )
         if (self._completed_strategies_cache is not None
                 and self._completed_strategies_mtime == current_mtimes):
@@ -390,7 +392,81 @@ class StrategyController(QObject):
                 "include_count": self._count_decision(records, cids, "include"),
                 "maybe_count": safe_int(row.get("maybe_count", 0)),
             })
+
+        try:
+            from medlitflow import scan_cache
+            scan_meta = scan_cache.get_scan_meta(config)
+        except Exception:
+            scan_meta = None
+
+        if scan_meta:
+            items.append({
+                "strategy_name": f"扫描：{scan_meta.get('strategy_name', '')}",
+                "strategy_status": "scan",
+                "record_count": safe_int(scan_meta.get("hit_count", 0)),
+                "run_count": 1,
+                "metric_coverage": "—",
+                "last_run_at": str(
+                    scan_meta.get("scan_at", "") or ""
+                )[:10],
+                "unscreened_count": 0,
+                "include_count": 0,
+                "maybe_count": 0,
+                "is_scan": True,
+                "scan_meta": scan_meta,
+            })
+
         return items
+
+    def _resolve_original_query(self, strategy_name):
+        if not strategy_name:
+            return ""
+        try:
+            from medlitflow import archive
+            config = self._config_ctrl.get_config()
+            archive._set_config(config)
+            try:
+                archive_root = archive._resolve_archive_root(config)
+                is_iso_date = archive._is_iso_date
+            finally:
+                archive._set_config(None)
+        except Exception:
+            return ""
+
+        runs_root = archive_root / "strategies" / strategy_name / "runs"
+        if not runs_root.exists():
+            return ""
+        try:
+            date_dirs = [
+                d for d in runs_root.iterdir()
+                if d.is_dir() and is_iso_date(d.name)
+            ]
+            if not date_dirs:
+                return ""
+            date_dirs.sort(reverse=True)
+            run_dirs = [d for d in date_dirs[0].iterdir() if d.is_dir()]
+            if not run_dirs:
+                return ""
+            run_dirs.sort(reverse=True)
+            run_dir = run_dirs[0]
+
+            for p in (
+                run_dir / "query_execution.json",
+                run_dir / "output" / "query_execution.json",
+            ):
+                if not p.exists():
+                    continue
+                try:
+                    import json
+                    data = json.loads(p.read_text(encoding="utf-8"))
+                    return str(
+                        data.get("original_pubmed_query", "") or ""
+                    )
+                except Exception:
+                    continue
+            return ""
+        except Exception:
+            return ""
 
     def on_strategy_refresh(self, strategy_name):
         from PySide6.QtWidgets import QMessageBox
@@ -446,6 +522,108 @@ class StrategyController(QObject):
             )
             return
         self._launch_metrics_task(strategy_name, target_cids)
+
+    def on_strategy_retrieval_again(self, strategy_name):
+        if not strategy_name:
+            return
+        if self._completed_strategies_cache is None:
+            self._refresh_completed_strategies()
+
+        item = None
+        for it in (self._completed_strategies_cache or []):
+            if it.get("strategy_name") == strategy_name:
+                item = it
+                break
+        if item is None:
+            self._mw.notify_user(
+                "warning", f"未找到策略：{strategy_name}"
+            )
+            return
+
+        if item.get("is_scan"):
+            query = str(
+                (item.get("scan_meta") or {}).get("pubmed_query", "") or ""
+            )
+        else:
+            query = self._resolve_original_query(strategy_name)
+
+        if not query:
+            self._mw.notify_user(
+                "warning",
+                "无原始检索式（该策略为旧版本采集），请手动输入",
+            )
+            return
+
+        self._mw.goto_page(PAGE_SEARCH)
+        try:
+            self._mw.search_view.input_panel.set_input_text(query)
+        except Exception:
+            pass
+        try:
+            self._mw.search_view.input_panel.mode_combo.setCurrentIndex(0)
+        except Exception:
+            pass
+        self._mw.notify_user(
+            "info", "已填入原始检索式，模式：精读"
+        )
+
+    def on_clear_scan(self):
+        from PySide6.QtWidgets import QMessageBox
+        reply = QMessageBox.question(
+            self._mw, "清空扫描缓存",
+            "清空后扫描结果不可恢复，是否继续？",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if reply != QMessageBox.Yes:
+            return
+
+        try:
+            from medlitflow import scan_cache
+            config = self._config_ctrl.get_config()
+            scan_cache.clear_scan_cache(config)
+        except Exception as exc:
+            self._mw.notify_user("error", f"清空失败：{exc}")
+            return
+
+        try:
+            self._mw.refresh_after_data_change()
+        except Exception:
+            pass
+        self.refresh_completed_strategies()
+        self._mw.notify_user("info", "扫描缓存已清空")
+
+    def on_strategy_view_scan_report(self):
+        try:
+            from medlitflow import core
+            config = self._config_ctrl.get_config()
+            library_root = Path(config["library"]["root"])
+        except Exception as exc:
+            self._mw.notify_user("error", f"配置加载失败：{exc}")
+            return
+
+        report_path = library_root / "scan_cache" / "scan_summary.md"
+        if not report_path.exists():
+            self._mw.notify_user(
+                "warning",
+                f"扫描报告不存在：{report_path.name}",
+            )
+            return
+
+        try:
+            opened = core.open_file_with_default_app(report_path)
+            if opened:
+                self._mw.notify_user(
+                    "info", f"已打开扫描报告：{report_path.name}"
+                )
+            else:
+                self._mw.notify_user(
+                    "warning", f"打开扫描报告失败：{report_path}"
+                )
+        except Exception as exc:
+            self._mw.notify_user(
+                "error", f"打开扫描报告失败：{exc}"
+            )
 
     def on_strategy_report(self, strategy_name):
         if not strategy_name:

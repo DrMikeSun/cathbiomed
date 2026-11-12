@@ -56,6 +56,7 @@ class LibraryController(QObject):
         self._library_records_mtime = None
         self._literature_display_records = None
         self._zotero_import_display_records = None
+        self._scan_display_records = None
         self._retrieval_search_saved: str = ""
 
     def load_library_records(self, force: bool = False):
@@ -265,6 +266,10 @@ class LibraryController(QObject):
         except Exception:
             pass
 
+        if tab_key == "scan":
+            self._refresh_scan_tab()
+            return
+
         fb = self._mw.literature_view.filter_bar
 
         if tab_key == "retrieval":
@@ -315,6 +320,8 @@ class LibraryController(QObject):
         tab = self._mw.literature_view.current_tab()
         if tab == "retrieval":
             display = self._literature_display_records
+        elif tab == "scan":
+            display = self._scan_display_records
         else:
             display = self._zotero_import_display_records
         if display is None or len(display) == 0:
@@ -329,6 +336,14 @@ class LibraryController(QObject):
         if not detail:
             return
         self._mw.literature_view.set_detail(detail)
+
+        if tab == "scan":
+            try:
+                self._mw.literature_view.detail_panel.clear_zotero_status()
+            except Exception:
+                pass
+            return
+
         cid = detail.get("canonical_id", "")
         zc = self._mw._zotero_controller
         if cid and zc is not None:
@@ -547,6 +562,7 @@ class LibraryController(QObject):
         if records is None or len(records) == 0:
             lv.set_zotero_import_records([])
             self._zotero_import_display_records = None
+            self._refresh_scan_tab()
             return
 
         if "data_origin" not in records.columns:
@@ -606,6 +622,7 @@ class LibraryController(QObject):
                 for r in import_df.to_dict("records")
             ],
         )
+        self._refresh_scan_tab()
 
     def _apply_literature_filter(self, filters):
         lv = self._mw.literature_view
@@ -795,6 +812,63 @@ class LibraryController(QObject):
             str(record.get("doi", "") or ""),
             "zotero",
             _col_val if _col_val else "（未分类）",
+        ]
+
+    def _refresh_scan_tab(self):
+        try:
+            from medlitflow import scan_cache
+            config = self._mw.get_config()
+            records, meta = scan_cache.load_scan_cache(config)
+        except Exception as exc:
+            try:
+                self._mw.logs_view.append_log(
+                    "warning",
+                    f"扫描缓存加载失败（第三 Tab 显示空）：{exc}",
+                    source="library",
+                )
+            except Exception:
+                pass
+            records, meta = None, None
+
+        self._scan_display_records = records
+
+        lv = self._mw.literature_view
+        if records is None or len(records) == 0:
+            try:
+                lv.set_scan_records([], None)
+            except (AttributeError, RuntimeError):
+                pass
+            return
+
+        rows = [
+            self._record_to_scan_row(r)
+            for r in records.to_dict("records")
+        ]
+        try:
+            lv.set_scan_records(rows, meta)
+        except (AttributeError, RuntimeError):
+            pass
+
+    def _record_to_scan_row(self, record):
+        jif_raw = record.get("journal_impact_factor")
+        try:
+            if jif_raw is None or (
+                isinstance(jif_raw, float) and jif_raw != jif_raw
+            ):
+                jif_display = "—"
+            else:
+                jif_display = f"{float(jif_raw):.2f}"
+        except (ValueError, TypeError):
+            jif_display = "—"
+
+        return [
+            format_strategies_short(record.get("strategy_names", "")),
+            str(record.get("title", "") or ""),
+            first_author(record.get("authors", "")),
+            str(record.get("journal", "") or ""),
+            format_year(record.get("year", "")),
+            jif_display,
+            all_sources(record.get("source_databases", "")),
         ]
 
     def _resolve_special_visual(self, record):

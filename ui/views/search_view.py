@@ -47,6 +47,7 @@ class SearchView(QWidget):
         # ---- 运行状态 ----
         self._run_state = self.STATE_IDLE
         self._current_run_name = ""
+        self._current_mode = "intensive"
 
         # ---- 日志节流缓冲 ----
         self._pending_logs = []
@@ -147,6 +148,9 @@ class SearchView(QWidget):
         merged.setdefault("stage", None)
         merged.setdefault("resume", False)
         merged.setdefault("pipeline_mode", "intensive")
+        self._current_mode = str(
+            merged.get("pipeline_mode", "intensive")
+        )
         self.run_requested.emit(merged)
 
     def _on_cancel_clicked(self):
@@ -193,6 +197,12 @@ class SearchView(QWidget):
             pass
         self._interactor = None
 
+    def set_input_text(self, text):
+        try:
+            self.input_panel.set_input_text(str(text or ""))
+        except Exception:
+            pass
+
     def _on_notified(self, level, message):
         self._append_log(level, message)
         try:
@@ -214,7 +224,10 @@ class SearchView(QWidget):
 
     def _on_started(self):
         self.set_run_state(self.STATE_RUNNING)
-        self.progress_panel.set_name("运行中")
+        if self._current_mode == "scan":
+            self.progress_panel.set_name("扫描中")
+        else:
+            self.progress_panel.set_name("运行中")
         self.progress_panel.set_status("processing")
         self.progress_panel.set_progress(-1)  # busy
         self._append_log("info", "运行已启动")
@@ -224,51 +237,66 @@ class SearchView(QWidget):
             self._main_layout.setStretchFactor(self.log_panel, 4)
         except Exception:
             pass
-        
+
     def _on_finished(self, run_root):
         self.set_run_state(self.STATE_FINISHED)
-        self.progress_panel.set_name(f"完成：{run_root}")
+        if self._current_mode == "scan":
+            self.progress_panel.set_name("扫描完成")
+            self._append_log(
+                "info",
+                "扫描完成（未下载全文，结果在文献库扫描结果 Tab）",
+            )
+        else:
+            self.progress_panel.set_name(f"完成：{run_root}")
+            self._append_log("info", f"运行完成：{run_root}")
         self.progress_panel.set_status("success")
         self.progress_panel.set_progress(100)
         self.progress_panel.set_stage("")
-        self._append_log("info", f"运行完成：{run_root}")
         try:
             self.input_panel.set_collapsed(False)
             self._main_layout.setStretchFactor(self.input_panel, 3)
             self._main_layout.setStretchFactor(self.log_panel, 1)
         except Exception:
             pass
-        
+
     def _on_failed(self, error):
         self.set_run_state(self.STATE_FAILED)
-        self.progress_panel.set_name(f"失败：{error}")
+        if self._current_mode == "scan":
+            self.progress_panel.set_name(f"扫描失败：{error}")
+            self._append_log("warning", "扫描失败（保留上次缓存）")
+        else:
+            self.progress_panel.set_name(f"失败：{error}")
+            self._append_log("error", f"运行失败：{error}")
         self.progress_panel.set_status("error")
         self.progress_panel.set_progress(0)
         self.progress_panel.set_stage("")
-        self._append_log("error", f"运行失败：{error}")
         try:
             self.input_panel.set_collapsed(False)
             self._main_layout.setStretchFactor(self.input_panel, 3)
             self._main_layout.setStretchFactor(self.log_panel, 1)
         except Exception:
             pass
-        
+
     def _on_interrupted(self):
         self.set_run_state(self.STATE_INTERRUPTED)
-        self.progress_panel.set_name("已中断")
+        if self._current_mode == "scan":
+            self.progress_panel.set_name("扫描已中断")
+            self._append_log("warning", "扫描已中断，未保存本次结果")
+        else:
+            self.progress_panel.set_name("已中断")
+            self._append_log("warning", "运行已中断")
+            self._append_log(
+                "info", "如需重试，请修改检索式后点击「开始运行」"
+            )
         self.progress_panel.set_status("warning")
         self.progress_panel.set_progress(0)
         self.progress_panel.set_stage("")
-        self._append_log("warning", "运行已中断")
-        self._append_log(
-            "info", "如需重试，请修改检索式后点击「开始运行」"
-        )
         try:
             self.input_panel.set_collapsed(False)
             self._main_layout.setStretchFactor(self.input_panel, 3)
             self._main_layout.setStretchFactor(self.log_panel, 1)
         except Exception:
-            pass    
+            pass 
 
     def _append_log(self, level, message, source=""):
         self._pending_logs.append((level, message, source))

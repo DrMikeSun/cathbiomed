@@ -48,6 +48,7 @@ class CompletedStrategyPanel(GlassPanel):
         "partially_screened":    "部分筛选",
         "confirmed":             "已确认",
         "archived_unprocessed":  "已归档",
+        "scan":                  "扫描（缓存）",
     }
 
     REFRESH_BTN_TEXT = "更新指标"
@@ -63,6 +64,10 @@ class CompletedStrategyPanel(GlassPanel):
     delete_requested = Signal(str)
     reopen_requested = Signal(str)
     data_reload_requested = Signal()
+
+    retrieval_again_requested = Signal(str)
+    view_scan_requested = Signal()
+    clear_scan_requested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(self.OBJECT_NAME)
@@ -136,6 +141,22 @@ class CompletedStrategyPanel(GlassPanel):
 
         row.addStretch()
 
+        self.view_scan_btn = QPushButton("查看报告")
+        self.view_scan_btn.setCursor(Qt.PointingHandCursor)
+        self.view_scan_btn.setVisible(False)
+        row.addWidget(self.view_scan_btn)
+
+        self.retrieval_again_btn = QPushButton("再次检索")
+        self.retrieval_again_btn.setObjectName("PrimaryCTA")
+        self.retrieval_again_btn.setCursor(Qt.PointingHandCursor)
+        self.retrieval_again_btn.setVisible(False)
+        row.addWidget(self.retrieval_again_btn)
+
+        self.clear_scan_btn = QPushButton("删除")
+        self.clear_scan_btn.setCursor(Qt.PointingHandCursor)
+        self.clear_scan_btn.setVisible(False)
+        row.addWidget(self.clear_scan_btn)
+
         self.refresh_btn = QPushButton(self.REFRESH_BTN_TEXT)
         self.refresh_btn.setObjectName("PrimaryCTA")
         self.refresh_btn.setCursor(Qt.PointingHandCursor)
@@ -179,6 +200,16 @@ class CompletedStrategyPanel(GlassPanel):
         self.more_btn.clicked.connect(self._on_more_clicked)
         self.table.row_clicked.connect(self._on_row_clicked)
 
+        self.view_scan_btn.clicked.connect(
+            lambda checked=False: self.view_scan_requested.emit()
+        )
+        self.retrieval_again_btn.clicked.connect(
+            self._on_retrieval_again_clicked
+        )
+        self.clear_scan_btn.clicked.connect(
+            lambda checked=False: self.clear_scan_requested.emit()
+        )
+
         try:
             sel_model = self.table.selectionModel()
             if sel_model is not None:
@@ -215,6 +246,11 @@ class CompletedStrategyPanel(GlassPanel):
 
     def _on_row_clicked(self, _row):
         self._update_buttons()
+
+    def _on_retrieval_again_clicked(self):
+        s = self.selected_strategy()
+        if s:
+            self.retrieval_again_requested.emit(s)
 
     def _on_consolidate(self):
         s = self.selected_strategy()
@@ -310,14 +346,32 @@ class CompletedStrategyPanel(GlassPanel):
             return 0
 
     def _update_buttons(self):
-        has_sel = self.selected_strategy() is not None
+        row = self.table.selected_row()
+        has_sel = 0 <= row < len(self._strategies)
+        is_scan = False
+        if has_sel:
+            item = self._strategies[row]
+            is_scan = bool(item.get("is_scan", False))
+
+        scan_visible = has_sel and is_scan
+        self.view_scan_btn.setVisible(scan_visible)
+        self.clear_scan_btn.setVisible(scan_visible)
+
+        self.retrieval_again_btn.setVisible(has_sel)
+        self.retrieval_again_btn.setEnabled(has_sel)
+
+        intensive_visible = has_sel and not is_scan
+        self.refresh_btn.setVisible(intensive_visible)
+        self.report_btn.setVisible(intensive_visible)
+        self.screening_btn.setVisible(intensive_visible)
+        self.more_btn.setVisible(intensive_visible)
         if self._refresh_state == "idle":
-            self.refresh_btn.setEnabled(has_sel)
+            self.refresh_btn.setEnabled(intensive_visible)
         else:
             self.refresh_btn.setEnabled(False)
-        self.report_btn.setEnabled(has_sel)
-        self.screening_btn.setEnabled(has_sel)
-        self.more_btn.setEnabled(has_sel)
+        self.report_btn.setEnabled(intensive_visible)
+        self.screening_btn.setEnabled(intensive_visible)
+        self.more_btn.setEnabled(intensive_visible)
 
     def set_refresh_state(self, state):
         state = str(state or "idle")

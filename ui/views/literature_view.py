@@ -40,6 +40,7 @@ class LiteratureView(QWidget):
 
     TAB_RETRIEVAL = "retrieval"
     TAB_ZOTERO_IMPORT = "zotero_import"
+    TAB_SCAN = "scan"
 
     TABLE_HEADERS_RETRIEVAL = [
         "检索策略", "标题", "作者", "期刊", "年份", "DOI", "来源", "状态",
@@ -72,6 +73,21 @@ class LiteratureView(QWidget):
         6: 140,   # Zotero分类
     }
 
+    TABLE_HEADERS_SCAN = [
+        "策略", "标题", "作者", "期刊", "年份", "IF", "来源",
+    ]
+    TABLE_MONO_COLUMNS_SCAN = {4}
+    TABLE_HIGHLIGHT_COLUMNS_SCAN = {5}
+    TABLE_COLUMN_WIDTHS_SCAN = {
+        0: 120,   # 策略
+        1: 450,   # 标题
+        2: 120,   # 作者
+        3: 130,   # 期刊
+        4: 60,    # 年份
+        5: 80,    # IF
+        6: 180,   # 来源
+    }
+
     SEARCH_PLACEHOLDER = "搜索标题 / 作者 / DOI"
     FILTERS = [
         ("strategy", "策略", ["全部"]),
@@ -95,6 +111,8 @@ class LiteratureView(QWidget):
         self._retrieval_rows: list = []
         self._retrieval_cids: list[str] = []
         self._zotero_import_rows: list = []
+        self._scan_rows: list = []
+        self._scan_meta: dict | None = None
 
         self._build_ui()
         self._connect_signals()
@@ -143,6 +161,7 @@ class LiteratureView(QWidget):
         self.main_toggle = SegmentToggle([
             ("📚 检索文献", self.TAB_RETRIEVAL),
             ("📥 Zotero 导入", self.TAB_ZOTERO_IMPORT),
+            ("🔍 扫描结果", self.TAB_SCAN),
         ])
         self.main_toggle.changed.connect(self._on_main_tab_changed)
         outer.addWidget(self.main_toggle)
@@ -276,13 +295,20 @@ class LiteratureView(QWidget):
         is_retrieval = (tab == self.TAB_RETRIEVAL)
         self.special_toggle.setVisible(is_retrieval)
         self.filter_bar.setVisible(is_retrieval)
+        self._cleanup_orphans_btn.setVisible(is_retrieval)
+        self._screening_btn.setVisible(is_retrieval)
 
     def _on_main_tab_changed(self, key):
         tab = str(key or self.TAB_RETRIEVAL)
-        if tab not in (self.TAB_RETRIEVAL, self.TAB_ZOTERO_IMPORT):
+        if tab not in (
+            self.TAB_RETRIEVAL, self.TAB_ZOTERO_IMPORT, self.TAB_SCAN,
+        ):
             tab = self.TAB_RETRIEVAL
         self._apply_tab_visibility(tab)
         self.close_detail()
+        if tab != self.TAB_SCAN:
+            self._filter_count_label.setText("")
+            self._filter_count_label.setVisible(False)
         self.tab_changed.emit(tab)
 
     def current_tab(self) -> str:
@@ -290,12 +316,16 @@ class LiteratureView(QWidget):
             key = str(self.main_toggle.current_key() or self.TAB_RETRIEVAL)
         except Exception:
             return self.TAB_RETRIEVAL
-        if key not in (self.TAB_RETRIEVAL, self.TAB_ZOTERO_IMPORT):
+        if key not in (
+            self.TAB_RETRIEVAL, self.TAB_ZOTERO_IMPORT, self.TAB_SCAN,
+        ):
             return self.TAB_RETRIEVAL
         return key
 
     def set_current_tab(self, tab_key: str) -> None:
-        if tab_key not in (self.TAB_RETRIEVAL, self.TAB_ZOTERO_IMPORT):
+        if tab_key not in (
+            self.TAB_RETRIEVAL, self.TAB_ZOTERO_IMPORT, self.TAB_SCAN,
+        ):
             return
         prev = self.current_tab()
         if tab_key == prev:
@@ -305,12 +335,21 @@ class LiteratureView(QWidget):
         self.close_detail()
         if tab_key == self.TAB_RETRIEVAL:
             self._show_retrieval()
+        elif tab_key == self.TAB_SCAN:
+            self._show_scan()
         else:
             self._show_zotero_import()
         self.tab_changed.emit(tab_key)
 
     def _apply_table_headers(self, tab: str) -> None:
-        if tab == self.TAB_ZOTERO_IMPORT:
+        if tab == self.TAB_SCAN:
+            self.table.set_headers(
+                headers=self.TABLE_HEADERS_SCAN,
+                mono_columns=self.TABLE_MONO_COLUMNS_SCAN,
+                highlight_columns=self.TABLE_HIGHLIGHT_COLUMNS_SCAN,
+                column_widths=self.TABLE_COLUMN_WIDTHS_SCAN,
+            )
+        elif tab == self.TAB_ZOTERO_IMPORT:
             self.table.set_headers(
                 headers=self.TABLE_HEADERS_ZOTERO_IMPORT,
                 mono_columns=self.TABLE_MONO_COLUMNS_ZOTERO_IMPORT,
@@ -335,6 +374,31 @@ class LiteratureView(QWidget):
         self._row_cids = []
         self.table.load_data(self._zotero_import_rows)
 
+    def _show_scan(self) -> None:
+        self._apply_table_headers(self.TAB_SCAN)
+        self._row_cids = []
+        self.table.load_data(self._scan_rows)
+
+        if self._scan_meta:
+            scan_at = str(
+                self._scan_meta.get("scan_at", "") or ""
+            )[:16].replace("T", " ")
+            hit_count = int(self._scan_meta.get("hit_count", 0) or 0)
+            if scan_at and hit_count > 0:
+                self._filter_count_label.setText(
+                    f"扫描时间：{scan_at} · 命中 {hit_count} 条"
+                )
+                self._filter_count_label.setVisible(True)
+                return
+        self._filter_count_label.setText("")
+        self._filter_count_label.setVisible(False)
+
+    def set_scan_records(self, rows, meta=None):
+        self._scan_rows = list(rows) if rows else []
+        self._scan_meta = meta if isinstance(meta, dict) else None
+        if self.current_tab() == self.TAB_SCAN:
+            self._show_scan()
+
     def set_literature(self, data, cids=None):
         self.set_retrieval_records(data, cids)
 
@@ -355,6 +419,8 @@ class LiteratureView(QWidget):
         self._retrieval_rows = []
         self._retrieval_cids = []
         self._zotero_import_rows = []
+        self._scan_rows = []
+        self._scan_meta = None
         self._row_cids = []
 
     def set_detail(self, data):
@@ -380,6 +446,8 @@ class LiteratureView(QWidget):
         self.filter_bar.set_filter_options("year", options)
 
     def set_filter_count(self, matched, total):
+        if self.current_tab() == self.TAB_SCAN:
+            return
         try:
             matched = int(matched)
             total = int(total)
@@ -511,6 +579,8 @@ class LiteratureView(QWidget):
         return ""
 
     def _on_context_menu(self, pos):
+        if self.current_tab() == self.TAB_SCAN:
+            return
         if self._row_cids is None or len(self._row_cids) == 0:
             return
 

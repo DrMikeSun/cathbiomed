@@ -578,6 +578,7 @@ class SearchQueueController(QObject):
                 self._mw.search_view.set_current_run_name(run_name)
             except Exception:
                 pass
+
         if not self._search_queue:
             try:
                 self._library_ctrl.load_library_records(force=True)
@@ -592,6 +593,10 @@ class SearchQueueController(QObject):
             self._refresh_queue_panel()
             self._notify_queue_summary()
         else:
+            try:
+                self._library_ctrl._refresh_literature_tabs()
+            except Exception:
+                pass
             self._launch_next_in_queue()
 
     def _on_search_worker_failed(self, error) -> None:
@@ -965,6 +970,8 @@ class SearchQueueController(QObject):
                 if version > 1:
                     continue
                 if state.get("state") != "running":
+                    continue
+                if state.get("mode") == "scan":
                     continue
                 interrupt_at = str(state.get("interrupt_at", "") or "")
                 interrupt_detail = str(

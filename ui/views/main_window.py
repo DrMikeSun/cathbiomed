@@ -498,6 +498,15 @@ class MedLitFlowMainWindow(QMainWindow):
         self.tasks_view.tab_changed.connect(
             self._strategy_ctrl.on_tasks_tab_changed
         )
+        self.tasks_view.strategy_retrieval_again_requested.connect(
+            self._strategy_ctrl.on_strategy_retrieval_again
+        )
+        self.tasks_view.strategy_view_scan_requested.connect(
+            self._strategy_ctrl.on_strategy_view_scan_report
+        )
+        self.tasks_view.strategy_clear_scan_requested.connect(
+            self._strategy_ctrl.on_clear_scan
+        )
         # ---- 仪表盘：导出 → 跳转设置页 ----
         self.dashboard_view.export_requested.connect(
             self._on_dashboard_export_requested
