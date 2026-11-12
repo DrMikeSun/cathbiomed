@@ -47,7 +47,7 @@ _DEFAULT_MODE = "intensive"
 _VALID_MODES = frozenset({"intensive", "scan"})
 
 _DEFAULT_MAX_HITS_THRESHOLD = 1000
-_DEFAULT_SCAN_MAX_HITS = 100
+_DEFAULT_SCAN_MAX_HITS = 1000
 _DEFAULT_FORCE_ROLLBACK = True
 _DEFAULT_FORCE_ROLLBACK_TO_SCAN = False
 
@@ -518,14 +518,6 @@ def _apply_hit_threshold(
     pipeline_cfg = config.get("pipeline", {}) or {}
 
     if mode == "scan":
-        limit = int(pipeline_cfg.get("scan_max_hits", _DEFAULT_SCAN_MAX_HITS))
-        if len(df) > limit:
-            _append_pipeline_audit(
-                run_root, "scan_truncated",
-                original=len(df), kept=limit,
-                truncation_criterion="source_order",
-            )
-            return df.head(limit).reset_index(drop=True), "scan"
         return df, "scan"
 
     threshold = int(pipeline_cfg.get(
@@ -563,9 +555,9 @@ def _apply_hit_threshold(
             "warning",
             f"4 源合并后共 {len(df)} 条记录，"
             f"超过总检索上限 {threshold}；"
-            f"自动降级为 scan（保留前 {limit} 条）",
+            f"自动截断到前 {limit} 条，继续执行完整精读流程",
         )
-        return df.head(limit).reset_index(drop=True), "scan"
+        return df.head(limit).reset_index(drop=True), "intensive"
 
     _append_pipeline_audit(
         run_root, "intensive_rollback",
@@ -912,6 +904,7 @@ def _write_run_metadata_and_query_execution(
         "crossref":  translated.get("crossref", []),
         "openalex":  translated.get("openalex", []),
         "raw_counts_by_source": _raw_counts_by_source,
+        "original_pubmed_query": pubmed_query,
     }
     (output_dir / "query_execution.json").write_text(
         json.dumps(query_execution, ensure_ascii=False, indent=2),
@@ -1236,6 +1229,8 @@ def _notify_incomplete_runs(config: dict) -> None:
         state = _read_run_state(run_dir)
         if state is None or state.get("state") != "running":
             continue
+        if state.get("mode") == "scan":
+            continue
         if not state.get("interrupt_at"):
             try:
                 _m = (run_dir / ".run_state.json").stat().st_mtime
@@ -1357,6 +1352,24 @@ def _execute_stage(
         return out_path
 
     if stage == "retrieval":
+        if mode == "scan":
+            df = stage_state["dedup_df"].copy()
+            for col in (
+                "downloaded_file_path", "content_format", "selected_url",
+                "redirect_chain_json", "access_route_used",
+                "secondary_pdf_path", "file_download_temp_path",
+            ):
+                df[col] = ""
+            df["retrieval_status"] = "needs_abstract_fallback"
+            df["retrieval_reason"] = "scan_mode"
+            df["attempt_count"] = 0
+            df["html_second_pass_status"] = "not_attempted"
+            df["file_dedup_decision"] = "not_applicable"
+            df["is_library_hit"] = False
+            stage_state["retrieval_df"] = df
+            out_path = run_root / _STAGE_OUTPUT_PATH["retrieval"]
+            _atomic_write_parquet(df, out_path)
+            return out_path
         return _execute_retrieval_stage(
             run_root, config, stage_state, resume,
         )
@@ -1371,6 +1384,7 @@ def _execute_stage(
     if stage == "enrich":
         tables = enrichment.enrich_all(
             stage_state["fallback_df"], config, run_root,
+            scan_mode=(mode == "scan"),
         )
         stage_state["enrich_tables"] = tables
         enrich_dir = run_root / "interim" / "enrich"
@@ -1959,6 +1973,7 @@ def run_pipeline(
                 "last_stage_state": "",
                 "post_hook_stage": "none",
                 "txn": {},
+                "mode": mode,
             }
             if _previous_interrupts:
                 _new_state["previous_interrupts"] = _previous_interrupts
@@ -2036,19 +2051,32 @@ def run_pipeline(
             if st == "output":
                 output_actually_executed = True
 
-        effective_mode = stage_state.get("_effective_mode", mode)
-
         if output_actually_executed:
             _write_run_metadata_and_query_execution(
                 run_root, config, strategy_name, run_name,
             )
 
-        if effective_mode == "scan" and output_actually_executed:
+        if mode == "scan" and output_actually_executed:
             _append_pipeline_audit(
                 run_root, "scan_mode_skip_hooks",
                 skipped=["hook1", "hook2", "hook3"],
-                downgraded=(mode == "intensive"),
             )
+            try:
+                from medlitflow import scan_cache
+                scan_cache.save_scan_cache(
+                    run_root, config, strategy_name,
+                )
+            except Exception as exc:
+                _append_pipeline_audit(
+                    run_root, "scan_cache_save_failed",
+                    error=str(exc),
+                )
+                shutil.rmtree(run_root, ignore_errors=True)
+                raise RuntimeError(
+                    f"扫描缓存写入失败：{exc}"
+                ) from exc
+            _update_run_state(run_root, {"state": "committed"})
+            (run_root / ".run_state.json").unlink(missing_ok=True)
         elif output_actually_executed:
             _run_post_hooks(
                 run_root, config, strategy_name, run_name, library_root,
@@ -2066,6 +2094,8 @@ def run_pipeline(
                     or "pipeline 中断"
                 ),
             })
+            if mode == "scan":
+                shutil.rmtree(run_root, ignore_errors=True)
         raise
     finally:
         robustness.release_lock(output_root)

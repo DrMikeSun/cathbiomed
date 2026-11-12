@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -243,22 +244,49 @@ def collect_all(
     config_copy["project"] = dict(config["project"])
     config_copy["project"]["run_name"] = run_name
 
+    is_scan = str(
+        (config.get("pipeline", {}) or {}).get("mode", "")
+    ).lower() == "scan"
+    query_cfg = dict(query_cfg)
+
+    if is_scan:
+        pubmed_query = str(query_cfg.get("pubmed", "") or "")
+        if pubmed_query and not re.search(
+            r"\[\s*dp\s*\]", pubmed_query, re.IGNORECASE,
+        ):
+            end_date = date.today()
+            start_date = end_date - timedelta(days=5 * 365)
+            query_cfg["pubmed"] = (
+                f"{pubmed_query} AND "
+                f"{start_date:%Y/%m/%d}:{end_date:%Y/%m/%d}[dp]"
+            )
+            _emit_log("scan: 注入滚动 5 年过滤")
+        else:
+            _emit_log("scan: 检索式已含 [dp]，跳过 5 年注入")
+
+    _incremental_dates = None if is_scan else last_run_dates
     translated = query_translator.translate_pubmed_query(
         query_cfg["pubmed"],
-        incremental_dates=last_run_dates,
+        incremental_dates=_incremental_dates,
     )
 
-    europepmc_query = query_cfg.get("europepmc")
-    if europepmc_query and last_run_dates and "europepmc" in last_run_dates:
-        start = last_run_dates["europepmc"]
-        end = core.today_iso()
-        europepmc_query = (
-            f'({europepmc_query}) AND FIRST_PDATE:[{start} TO {end}]'
-        )
-    if not europepmc_query:
+    if is_scan:
         europepmc_query = translated["europepmc"]
+    else:
+        europepmc_query = query_cfg.get("europepmc")
+        if (europepmc_query and last_run_dates
+                and "europepmc" in last_run_dates):
+            start = last_run_dates["europepmc"]
+            end = core.today_iso()
+            europepmc_query = (
+                f'({europepmc_query}) AND FIRST_PDATE:[{start} TO {end}]'
+            )
+        if not europepmc_query:
+            europepmc_query = translated["europepmc"]
 
-    if "crossref" in query_cfg and query_cfg["crossref"]:
+    if is_scan:
+        crossref_queries = translated["crossref"]
+    elif "crossref" in query_cfg and query_cfg["crossref"]:
         filt = core.clean_text(query_cfg.get("crossref_filter", ""))
         if last_run_dates and "crossref" in last_run_dates:
             start = last_run_dates["crossref"]
@@ -272,7 +300,9 @@ def collect_all(
     else:
         crossref_queries = translated["crossref"]
 
-    if "openalex" in query_cfg and query_cfg["openalex"]:
+    if is_scan:
+        openalex_queries = translated["openalex"]
+    elif "openalex" in query_cfg and query_cfg["openalex"]:
         filt = core.clean_text(query_cfg.get("openalex_filter", ""))
         if last_run_dates and "openalex" in last_run_dates:
             start = last_run_dates["openalex"]

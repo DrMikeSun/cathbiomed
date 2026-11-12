@@ -1721,13 +1721,102 @@ def _load_library_relations_for_hits(
         "relation_published_in": relation_published_in,
     }
 
+def _enrich_scan(
+    df: pd.DataFrame, config: dict,
+) -> dict[str, pd.DataFrame]:
+    empty_papers = pd.DataFrame(columns=_ENTITY_PAPERS_COLUMNS)
+    empty_authors = pd.DataFrame(columns=_ENTITY_AUTHORS_COLUMNS)
+    empty_institutions = pd.DataFrame(columns=_ENTITY_INSTITUTIONS_COLUMNS)
+    empty_journals = pd.DataFrame(columns=_ENTITY_JOURNALS_COLUMNS)
+    empty_cites = pd.DataFrame(columns=_RELATION_CITES_COLUMNS)
+    empty_authored = pd.DataFrame(columns=_RELATION_AUTHORED_COLUMNS)
+    empty_affiliated = pd.DataFrame(columns=_RELATION_AFFILIATED_COLUMNS)
+    empty_published = pd.DataFrame(columns=_RELATION_PUBLISHED_IN_COLUMNS)
+
+    if df is None or len(df) == 0:
+        return {
+            "entity_papers": empty_papers,
+            "entity_authors": empty_authors,
+            "entity_institutions": empty_institutions,
+            "entity_journals": empty_journals,
+            "relation_cites": empty_cites,
+            "relation_authored": empty_authored,
+            "relation_affiliated": empty_affiliated,
+            "relation_published_in": empty_published,
+        }
+
+    working_df = df.copy()
+
+    journal_names: list[str] = []
+    for _, row in working_df.iterrows():
+        name = core.clean_text(row.get("journal", ""))
+        if name:
+            journal_names.append(name)
+    unique_journals = list(dict.fromkeys(journal_names))
+
+    journal_metrics_map: dict[str, dict] = {}
+    if unique_journals:
+        _emit_log(
+            f"enrich(scan): JCR 开始匹配 {len(unique_journals)} 个期刊"
+        )
+        try:
+            jcr_df = fetch_journal_metrics(unique_journals, config)
+            for _, r in jcr_df.iterrows():
+                journal_metrics_map[r["journal_name"]] = r.to_dict()
+            _emit_log(
+                f"enrich(scan): JCR 匹配完成 "
+                f"{len(journal_metrics_map)}/{len(unique_journals)}"
+            )
+        except FileNotFoundError as exc:
+            _append_citation_log(
+                _library_root(config),
+                {
+                    "run_at": _now_iso(),
+                    "event": "jcr_missing",
+                    "message": f"JCR 表缺失：{exc}",
+                },
+            )
+        except Exception as exc:  # noqa: BLE001
+            _append_citation_log(
+                _library_root(config),
+                {
+                    "run_at": _now_iso(),
+                    "event": "jcr_parse_failed",
+                    "error_type": type(exc).__name__,
+                    "message": str(exc)[:500],
+                },
+            )
+
+    entity_papers = _build_entity_papers(working_df, {})
+    entity_journals = _build_entity_journals(
+        working_df, journal_metrics_map,
+    )
+    relation_published_in = _build_relation_published_in(
+        working_df, journal_metrics_map,
+    )
+
+    return {
+        "entity_papers": entity_papers,
+        "entity_authors": empty_authors,
+        "entity_institutions": empty_institutions,
+        "entity_journals": entity_journals,
+        "relation_cites": empty_cites,
+        "relation_authored": empty_authored,
+        "relation_affiliated": empty_affiliated,
+        "relation_published_in": relation_published_in,
+    }
+
+
 def enrich_all(
     df: pd.DataFrame,
     config: dict,
     run_root: Path,
+    scan_mode: bool = False,
 ) -> dict[str, pd.DataFrame]:
-    library_root = _library_root(config)
+    if scan_mode:
+        return _enrich_scan(df, config)
 
+    library_root = _library_root(config)
     if df is None or len(df) == 0:
         return {
             "entity_papers": pd.DataFrame(columns=_ENTITY_PAPERS_COLUMNS),
