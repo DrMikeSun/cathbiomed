@@ -155,7 +155,7 @@ pipeline:
   max_hits_threshold: 5000
   force_rollback: true
   force_rollback_to_scan: false
-  scan_max_hits: 100
+  scan_max_hits: 1000
   batch:
     continue_on_failure: true
 output:

@@ -52,7 +52,7 @@
 | `screening` | 保留策略、回收站天数、时间窗口 | ✅ |
 | `zotero` | Zotero 库类型、附件模式、观察分类 | ✅ |
 | `archive` | 策略快照策略、合并阈值 | ⚠️ |
-| `pipeline` | 运行模式、总检索上限 | ✅ |
+| `pipeline` | 运行模式、总检索上限、超阈值截断上限 | ✅ |
 | `output` | 导出目录、导出模式、子目录模板 | ⚠️ |
 | `query_translation` | 检索式跨源翻译、审计开关 | ⚠️ |
 
@@ -83,6 +83,27 @@
 
 **为什么会有上限？** 无上限的检索会消耗大量 API 配额、磁盘空间和采集时间。一篇文献筛选平均需要 30 秒，10,000 条需要约 83 小时。请根据实际需要设置。
 
+### pipeline.scan_max_hits
+
+**仅用于 intensive 超阈值截断**（`pipeline.force_rollback_to_scan=true` 时），scan 模式本身不读此参数（scan 不截断）。
+
+| 值 | 含义 |
+|---|---|
+| 1000（v1.5.1 起默认） | intensive 命中超过 `max_hits_threshold` 且 `force_rollback_to_scan=true` 时，截断到该值后继续完整精读流程（下载全文 + S2/OpenAlex + 入库归档） |
+| 100（v1.5.0 旧默认值） | 旧版"降级"语义：截断到 100 条后按 scan 处理（v1.5.1 起取消该语义） |
+
+注意：`force_rollback_to_scan=false`（默认）时，intensive 超阈值直接失败，不触发截断。
+
+---
+
+### pipeline.force_rollback_to_scan
+
+决定 intensive 超阈值时的行为：
+
+| 值 | 行为 |
+|---|---|
+| `false`（默认） | 直接报错，提示调整 `max_hits_threshold` 或精炼检索式 |
+| `true` | 截断到 `scan_max_hits` 条后，**继续执行完整精读流程**（不降级为 scan） |
 ---
 
 ## 当前行为说明（配置项与实际执行的差异）
@@ -96,6 +117,7 @@
 | `output.export_mode` | 默认 `symlink` | Windows 下自动降级为 `copy` |
 | `retrieval.file_format.markdown_converter` | 默认 `false` | v1.5 未实现 Markdown 转换，配置项保留但无功能 |
 | `retrieval.max_results_per_query` | 默认 1000 | 作为总量安全上限，与各源 API 上限取较小值 |
+| `pipeline.force_rollback_to_scan` | 默认 `false` | `false`: intensive 超阈值直接失败；`true`: 截断到 `scan_max_hits` 后走完整精读|
 
 ---
 
