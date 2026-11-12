@@ -6,7 +6,7 @@
 
 **[简体中文](README.md)** · [English](#english-version-planned)
 
-![Version](https://img.shields.io/badge/version-1.5-blue)
+![Version](https://img.shields.io/badge/version-1.5.1-blue)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-lightgrey)
 ![License](https://img.shields.io/badge/license-Apache--2.0-blue)
@@ -15,7 +15,7 @@
 
 # CathBiomed
 
-以用户为主导的生物医学科研文献工作台。单机运行，数据不出本机；覆盖**采集 → 去重 → 全文获取 → 筛选 → 归档 → Zotero 同步**全流程，输出可追溯的 PRISMA 审计链。
+以用户为主导的生物医学科研文献工作台。单机运行，数据不出本机；覆盖**采集 → 去重 → 全文获取 → 筛选 → 归档 → Zotero 同步**全流程，输出可追溯的审计链。
 
 ---
 
@@ -24,6 +24,7 @@
 | 模块 | 能力 | 说明 |
 |---|---|---|
 | **五源采集** | PubMed / PMC / Europe PMC / Crossref / OpenAlex | NCBI E-utilities 分页、Europe PMC cursorMark、Crossref offset、OpenAlex cursor；统一 Schema，单源内去重 |
+| **泛读初筛（scan）** | 独立轻量流程，不下载全文，2–5 分钟完成 | 固定滚动近 5 年（`[dp]` 已含则跳过）；只取元数据 + 摘要 + JCR；不跑 S2/OpenAlex；结果写 `data/library/scan_cache/`，不写 library、不进 PRISMA；只保留最近一次 |
 | **级联去重** | DOI → PMID → PMCID → 标准化标题 | union-find 合并；摘要变体完整保留（single / identical / near_identical / divergent） |
 | **三级全文回退** | 本地 raw 缓存 → PubMed EFetch → Europe PMC | 逐级降级，`fallback_level` 落盘；摘要超 100 KB 自动截断 |
 | **付费墙识别** | 用户关键词 + 启发式评分 | IMRaD 章节缺失 / 体积异常 / 特征词缺失 → `paywall` / `paywall_suspect` 分类 |
@@ -40,9 +41,10 @@
 | 维度 | CathBiomed | 典型同类工具 |
 |---|---|---|
 | 采集能力 | ✅ 五源统一采集 + 三级全文回退 | ❌ Rayyan / Covidence 仅做筛选，不采集 |
+| 泛读模式 | ✅ 独立轻量初筛，2–5 分钟完成，不下载全文 | ❌ 多数同类工具不区分快速初筛与精读 |
 | 运行方式 | ✅ 单机本地，无云端账号，数据不出本机 | ❌ Covidence 云端托管，数据上传厂商 |
 | 筛选模式 | ✅ 用户主导，工具只负责「精准抵达」 | ❌ 自动化黑箱排序，决策依据不可追溯 |
-| 审计链 | ✅ 完整 PRISMA 流程 + 5 类审计日志 | ⚠️ 部分工具仅记录最终决策，不记录过程 |
+| 审计链 | ✅ 可追溯审计链 + 5 类审计日志 | ⚠️ 部分工具仅记录最终决策，不记录过程 |
 | Zotero 集成 | ✅ 双向同步（推送 + 拉取 + 失效验证） | ❌ 多数工具需手动导出 RIS/BibTeX |
 | 期刊指标 | ✅ JCR 影响因子 + 分区 + 引用数一体 | ⚠️ 需另装插件或手动查询 |
 | 空间管理 | ✅ 3 档保留策略 + 回收站 + 空间估算 | ⚠️ 多数工具无归档压缩 |
@@ -54,6 +56,7 @@
 | 场景 | 痛点 | CathBiomed 的解法 |
 |---|---|---|
 | 系统综述检索 | 5 个数据库分别检索，手动合并去重 1000+ 条 | 一次输入检索式，五源统一采集，级联去重 |
+| 快速初筛 | 不确定检索式宽窄，想快速看有没有相关文献 | 泛读模式 2–5 分钟出结果，不下载全文，不占用 library |
 | 全文获取 | 付费墙 / 失效链接导致大量文献无全文 | 三级回退 + 付费墙识别 + 二次追链 |
 | 筛选记录 | PRISMA 流程图靠人工整理，易出错 | 决策自动记录 + 筛选审计 + 一键导出报告 |
 | 多人复核 | 双人决策冲突无法追溯 | `decision_1 / decision_2 / conflict_status` 字段（v1.6 完整启用） |
@@ -116,6 +119,8 @@ python main.py
 | 步骤 | 页面 | 操作 |
 |---|---|---|
 | 1 | **检索** | 输入检索式（多个用 `;` 或换行分隔）→ 选模式（精读 / 泛读）→ 开始运行 |
+| 1.1 | **文献库 → 扫描结果** | 泛读完成后，第三 Tab「🔍 扫描结果」查看命中列表（策略 / 标题 / 作者 / 期刊 / 年份 / IF / 来源） |
+| 1.2 | **采集任务 → 已完成** | 扫描条目底部 3 按钮：查看报告（打开 `scan_summary.md`）/ 再次检索（跳检索页精读）/ 删除（清空缓存） |
 | 2 | **筛选中心** | 左侧选策略 → 按 `I` / `E` / `M` / `U` 批量决策 → 保存决策 |
 | 3 | **筛选中心** | 决策完整后 → 确认归档 → 文件移动到 `library/{included,excluded,maybe,unscreened}/` |
 | 4 | **文献库** | 查看已归档文献 → 右键标记噪声 / 数据源删除 / 彻底删除 |
@@ -164,7 +169,13 @@ v1.5 是首个开源版本，后续小版本升级按以下两种方式任选，
 3. 将旧目录的 `data/` 和 `config/user.yaml` 复制到新目录
 4. 启动新目录中的 `CathBiomed.exe`
 
-当前 v1.5 无数据结构变更，无需额外迁移步骤。如需回滚，保留旧 zip 覆盖回去即可。
+**v1.5 → v1.5.1 升级说明**：
+
+- 无数据结构变更，现有 library / archive / Zotero 链接完全兼容，无需迁移
+- 新采集的策略（v1.5.1 起）的 `query_execution.json` 自动写入 `original_pubmed_query`，可用于「再次检索」
+- v1.5.0 及之前采集的旧策略无此字段，点击「再次检索」仅日志提示（见「已知限制」第 13 条）
+- `config/default.yaml` 中 `pipeline.scan_max_hits` 默认值 100 → 1000（**仅用于 intensive 超阈值截断**，scan 模式不读）
+- 如需回滚，保留旧 zip 覆盖回去即可
 
 ---
 
@@ -184,7 +195,7 @@ v1.5 是首个开源版本，后续小版本升级按以下两种方式任选，
 
 ```text
 cathbiomed/
-├── src/medlitflow/        后端 18 模块
+├── src/medlitflow/        后端 19 模块
 │   ├── collectors.py      五源采集
 │   ├── dedup.py           级联去重
 │   ├── retrieval.py       全文获取 + 付费墙识别
@@ -192,6 +203,7 @@ cathbiomed/
 │   ├── enrichment.py      引用 / JCR / 机构增强
 │   ├── screening.py       筛选 + 文件生命周期
 │   ├── archive.py         策略归档 + 版本管理
+│   ├── scan_cache.py      scan 结果缓存 + 报告生成
 │   ├── pipeline.py        6 阶段调度
 │   ├── robustness.py      启动体检 + 锁 + 中断
 │   └── ...
@@ -212,7 +224,7 @@ cathbiomed/
 
 ---
 
-## 已知限制（v1.5）
+## 已知限制（v1.5.1）
 
 | # | 限制 | 影响 | 计划 |
 |---|---|---|---|
@@ -228,6 +240,7 @@ cathbiomed/
 | 10 | Zotero 导入个别文献可能不进入指定分类 | 个别文献可能落在 Zotero 默认分类而非观察分类 | 待排查；可在 Zotero 中手动归类 |
 | 11 | 取消后各阶段中断响应时间不一 | 个别阶段需等待当前网络请求结束；个别阶段运行时间偏长；不推荐频繁中止 | v1.6 细化检查点 |
 | 12 | 不同显示尺寸下部分内容可能重叠或显示不全 | 小窗口或高 DPI 下表格 / 卡片布局可能挤压 | v1.6 适配 |
+| 13 | 旧策略「再次检索」无视觉反馈 | v1.5.0 及之前采集的策略，`query_execution.json` 无 `original_pubmed_query`；点击「再次检索」后仅日志页显示 `[WARN] 无原始检索式（该策略为旧版本采集），请手动输入`，不跳检索页 | 手动输入检索式；v1.5.1 起新采集的策略无此问题 |
 
 ---
 
@@ -271,7 +284,6 @@ A：可以。两种方式任选：
 |---|---|---|
 | **v1.6** | 智能检索（四层架构 + LLM 辅助设计检索式 + 3 层幻觉防护） | 降低设计高质量检索式的门槛 |
 
-
 ---
 
 ## 文档
@@ -282,9 +294,57 @@ A：可以。两种方式任选：
 
 ---
 
+## 联系与支持
+
+欢迎通过以下渠道反馈 Bug、提出建议、讨论需求或合作：
+
+- **邮箱**：`mikesunjade@foxmail.com`
+- **GitHub Issues**：[提交 Issue](https://github.com/DrMikeSun/cathbiomed/issues)
+- **B 站**：`一笑烦恼消`
+
+反馈 Bug 时可附日志或 `data/runs/<run_name>/audit/pipeline_audit.jsonl` 数行，便于定位。
+
+---
+
+## 开源版与闭源定制版
+
+CathBiomed 采用双轨模式：
+
+| 版本 | 定位 | 功能 | 支持 |
+|---|---|---|---|
+| **开源版**（本仓库） | 完整基础版，持续迭代 | 五源采集、去重、全文获取、筛选、归档、Zotero 同步、审计链 | 社区支持（GitHub Issues） |
+| **闭源定制版** | 面向个人研究者、课题组、实验室 | 在开源版基础上增加高级功能、按需开发、优先支持 | 作者直接支持 |
+
+开源版采用 Apache 2.0 许可证，可自由使用、修改、分发，包括商业用途。闭源定制版由作者提供增值服务，按实际需求开发。如需了解详情，请通过上方邮箱联系。
+
+---
+
+## 赞助
+
+如果 CathBiomed 对你的科研工作有帮助，欢迎赞助支持项目持续迭代。赞助完全自愿，不影响开源版的使用。
+
+| 方式 | 说明 |
+|---|---|
+| **支付宝** | 扫码赞助；备注可写 `CathBiomed 支持` + 简短需求/idea 关键词（备注约 50 字以内） |
+| **微信** | 扫码赞助（赞赏码）；留言可写简短需求/idea |
+
+<div align="center">
+
+| 支付宝 | 微信赞赏 |
+|---|---|
+| ![支付宝](assets/sponsor/alipay.png) | ![微信赞赏](assets/sponsor/wechat.png) |
+
+</div>
+
+说明：
+- 需求优先通过 GitHub Issues 社媒或邮箱讨论；
+- 如需闭源定制版或合作，请通过上方邮箱联系，不要通过赞助备注讨论复杂需求；
+
+---
+
 ## 贡献
 
-- **Bug 报告**：请附 `data/runs/<run_name>/audit/pipeline_audit.jsonl` 最后 50 行
+- **Bug 报告**：反馈 Bug 时可附日志或 `data/runs/<run_name>/audit/pipeline_audit.jsonl` 数行，便于定位。
 - **功能建议**：请说明「解决什么问题」而非「加什么按钮」
 - **Pull Request**：提交前跑 `ruff check src/ ui/`；后端改动请说明影响范围
 - **英文文档**：欢迎提供 README 英文版 PR（见顶部语言切换）
@@ -301,7 +361,7 @@ A：可以。两种方式任选：
 
 <div align="center">
 
-**CathBiomed v1.5** · 2026-11-05
+**CathBiomed v1.5.1** · 2026-11-12
 
 [回到顶部](#cathbiomed) · [配置手册](config/README.md)
 

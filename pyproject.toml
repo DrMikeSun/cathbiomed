@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cathbiomed"
-version = "1.5"
+version = "1.5.1"
 description = "医学与生命科学领域的文献采集、筛选、归档与知识图谱构建管线"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
